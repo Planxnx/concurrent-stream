@@ -12,15 +12,16 @@ type ParallelMap[I, O any] struct {
 }
 
 // NewParallelMap creates a new ParallelMap with the given context, concurrency limit, input slice, and callback function.
-func NewParallelMap[I, O any](ctx context.Context, c int, input []I, cb func(I) O) ParallelMap[I, O] {
+func NewParallelMap[I, O any](ctx context.Context, c int, input []I, iteratee func(item I, index int) O) ParallelMap[I, O] {
 	in := make(chan func() O)
 	out := make(chan O, len(input))
 	done := make(chan struct{})
 	go func() {
 		defer close(in)
-		for _, i := range input {
+		for i, item := range input {
+			i, item := i, item
 			in <- func() O {
-				return cb(i)
+				return iteratee(item, i)
 			}
 		}
 	}()
@@ -28,6 +29,7 @@ func NewParallelMap[I, O any](ctx context.Context, c int, input []I, cb func(I) 
 		defer close(done)
 		stream(ctx, c, in, out)
 	}()
+
 	return ParallelMap[I, O]{
 		in:     in,
 		out:    out,
