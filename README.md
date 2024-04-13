@@ -1,5 +1,7 @@
 # **concurrent-stream**: High Throughput Generics Stream/Pipeline/Channel Processing in Go.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/planxnx/concurrent-stream.svg)](https://pkg.go.dev/github.com/planxnx/concurrent-stream)
+
 ```sh
 go get github.com/planxnx/concurrent-stream
 ```
