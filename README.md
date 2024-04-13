@@ -9,42 +9,42 @@ go get github.com/planxnx/concurrent-stream
 ### Basic
 
 ```go
-	results := make(chan int)
-	stream := cstream.NewStream(ctx, 8, results)
+results := make(chan int)
+stream := cstream.NewStream(ctx, 8, results)
 
-	for i := 0; i < 10; i++ {
-		i := i
-		stream.Go(func() int {
-			return expensiveFunc(i)
-		})
-	}
+for i := 0; i < 10; i++ {
+	i := i
+	stream.Go(func() int {
+		return expensiveFunc(i)
+	})
+}
 
-	go func() {
-		for result := range results {
-			fmt.Pritln(result)
-        }
-	}
+go func() {
+	for result := range results {
+		fmt.Pritln(result)
+    }
+}
 
-	if err := stream.Wait(); err != nil {
-		panic(err)
-	}
-	close(result)
+if err := stream.Wait(); err != nil {
+	panic(err)
+}
+close(result)
 ```
 
 ### Concurrency Mapping
 
 ```go
-	data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	mapper := NewParallelMap(ctx, 8, data, func(item int, _ int) {
-		return expensiveFunc(item)
-	})
+data := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+mapper := NewParallelMap(ctx, 8, data, func(item int, _ int) {
+	return expensiveFunc(item)
+})
 
-	.
-	.
-	.
+.
+.
+.
 
-	result, err := mapper.Result()
-	if err != nil {
-		panic(err)
-	}
+result, err := mapper.Result()
+if err != nil {
+	panic(err)
+}
 ```
