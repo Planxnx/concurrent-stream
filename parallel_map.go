@@ -20,8 +20,12 @@ func NewParallelMap[I, O any](ctx context.Context, c int, input []I, iteratee fu
 		defer close(in)
 		for i, item := range input {
 			i, item := i, item
-			in <- func() O {
+			select {
+			case <-done:
+				return
+			case in <- func() O {
 				return iteratee(item, i)
+			}:
 			}
 		}
 	}()

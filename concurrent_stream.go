@@ -38,7 +38,11 @@ func (s *Stream[T]) Close() {
 // Go sends a task to the stream's pool. All tasks are executed concurrently.
 // If worker pool is full, it will block until a worker is available.
 func (s *Stream[T]) Go(task func() T) {
-	s.in <- task
+	select {
+	case <-s.done:
+	case <-s.ctx.Done():
+	case s.in <- task:
+	}
 }
 
 // Out returns the output channel.
