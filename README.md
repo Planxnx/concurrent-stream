@@ -22,7 +22,7 @@ for i := 0; i < 10; i++ {
 go func() {
 	for result := range results {
 		fmt.Pritln(result)
-    }
+	}
 }
 
 if err := stream.Wait(); err != nil {
