@@ -150,7 +150,6 @@ func stream[T any](ctx context.Context, c int, in <-chan func() T, out chan<- T)
 			// Block until a worker is available.
 			tasks <- task
 		}
-
 	}
 
 	// Input channel is closed, no more tasks will be sent.

@@ -43,9 +43,9 @@ func NewParallelMap[I, O any](ctx context.Context, c int, input []I, iteratee fu
 }
 
 // Close stops the stream.
-func (s *ParallelMap[I, O]) Close() {
-	close(s.in)
-	close(s.done)
+func (p *ParallelMap[I, O]) Close() {
+	close(p.in)
+	close(p.done)
 }
 
 // Wait blocks until map is done or the context is canceled.
