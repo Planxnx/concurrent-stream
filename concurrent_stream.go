@@ -3,41 +3,71 @@ package cstream
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 )
 
 // Stream is a simple stream of tasks with a concurrency limit.
 type Stream[T any] struct {
-	ctx  context.Context
-	in   chan func() T
-	out  chan T
-	done chan struct{}
+	ctx   context.Context
+	in    chan func() T
+	out   chan T
+	done  chan struct{}
+	isRun atomic.Bool
 }
 
 // NewStream creates a new StreamChan with the given context, concurrency limit, and output channel.
 func NewStream[T any](ctx context.Context, c int, out chan T) *Stream[T] {
 	in := make(chan func() T)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		stream(ctx, c, in, out)
-	}()
-	return &Stream[T]{
+
+	s := &Stream[T]{
 		ctx:  ctx,
 		in:   in,
 		out:  out,
 		done: done,
 	}
+
+	go func() {
+		defer s.isRun.Store(false)
+		defer close(done)
+		s.isRun.Store(true)
+		stream(ctx, c, in, out)
+	}()
+
+	return s
 }
 
 // Close stops the stream.
+// Will block until concurrent map is closed.
 func (s *Stream[T]) Close() {
+	if !s.isRun.Load() {
+		return
+	}
 	close(s.in)
-	close(s.done)
+	<-s.done
+}
+
+// IsDone returns true if the stream is done or finished executing.
+func (s *Stream[T]) IsDone() bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsRunning returns true if the stream is running.
+func (s *Stream[T]) IsRunning() bool {
+	return s.isRun.Load()
 }
 
 // Go sends a task to the stream's pool. All tasks are executed concurrently.
 // If worker pool is full, it will block until a worker is available.
 func (s *Stream[T]) Go(task func() T) {
+	if !s.isRun.Load() {
+		return
+	}
 	select {
 	case <-s.done:
 	case <-s.ctx.Done():
@@ -52,6 +82,9 @@ func (s *Stream[T]) Out() <-chan T {
 
 // Wait blocks until stream is done or the context is canceled.
 func (s *Stream[T]) Wait() error {
+	if !s.isRun.Load() {
+		return nil
+	}
 	select {
 	case <-s.done:
 		return nil
