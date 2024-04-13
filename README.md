@@ -1,4 +1,4 @@
-# **concurrent-stream**: High Throughput Generics Stream/Pipeline Processing.
+# **concurrent-stream**: High Throughput Generics Stream/Pipeline/Channel Processing in Go.
 
 ```sh
 go get github.com/planxnx/concurrent-stream
