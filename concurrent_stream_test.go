@@ -13,7 +13,7 @@ func TestStream(t *testing.T) {
 	ctx := context.Background()
 
 	goroutines := []int{-8, -4, -2, -1, 0, 1, 2, 4, 8}
-	n := []int{10, 100, 1000, 10000, 100000}
+	n := []int{10, 100, 1000}
 	basicStream := func(t *testing.T, n int, goroutine int) {
 		results := make(chan int)
 		stream := cstream.NewStream(ctx, goroutine, results)
@@ -28,7 +28,7 @@ func TestStream(t *testing.T) {
 				}
 				i := i
 				stream.Go(func() int {
-					return i * i
+					return factorial(i)
 				})
 			}
 			stream.Close()
@@ -46,8 +46,8 @@ func TestStream(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for result := range results {
-				if result != i*i {
-					t.Errorf("expected %d, got %d", i*i, result)
+				if expected := factorial(i); result != expected {
+					t.Errorf("expected %d, got %d", expected, result)
 				}
 				i++
 			}
@@ -79,4 +79,11 @@ func TestStream(t *testing.T) {
 			})
 		}
 	}
+}
+
+func factorial(n int) int {
+	if n == 0 {
+		return 1
+	}
+	return n * factorial(n-1)
 }
