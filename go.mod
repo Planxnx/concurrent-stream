@@ -1,3 +1,3 @@
 module github.com/planxnx/concurrent-stream
 
-go 1.22
+go 1.19
