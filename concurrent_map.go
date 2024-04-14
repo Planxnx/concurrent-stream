@@ -70,6 +70,7 @@ func (m *Map[I, O]) run() {
 	go func() {
 		defer m.isRun.Store(false)
 		defer close(m.done)
+		defer close(m.out)
 		stream(m.ctx, m.goroutine, m.in, m.out)
 	}()
 }
@@ -118,12 +119,12 @@ func (m *Map[I, O]) Wait() error {
 // Result returns the results of the parallel map.
 // It will block until all the tasks are completed.
 func (m *Map[I, O]) Result(ctx context.Context) ([]O, error) {
-	defer close(m.out)
 	for {
 		select {
-		case <-m.done:
-			return m.result, nil
-		case o := <-m.out:
+		case o, ok := <-m.out:
+			if !ok {
+				return m.result, nil
+			}
 			m.result = append(m.result, o)
 		case <-ctx.Done():
 			return m.result, ctx.Err()
