@@ -21,16 +21,21 @@ for i := 0; i < 10; i++ {
 	})
 }
 
+wg := sync.WaitGroup{}
+wg.Add(1)
 go func() {
+	defer wg.Done()
 	for result := range results {
-		fmt.Pritln(result)
+		fmt.Println(result)
 	}
-}
+}()
 
 if err := stream.Wait(); err != nil {
 	panic(err)
 }
-close(result)
+close(results)
+
+wg.Wait()
 ```
 
 ### Concurrency Mapping
