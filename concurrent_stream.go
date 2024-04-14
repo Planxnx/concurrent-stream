@@ -3,41 +3,71 @@ package cstream
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 )
 
 // Stream is a simple stream of tasks with a concurrency limit.
 type Stream[T any] struct {
-	ctx  context.Context
-	in   chan func() T
-	out  chan T
-	done chan struct{}
+	ctx   context.Context
+	in    chan func() T
+	out   chan T
+	done  chan struct{}
+	isRun atomic.Bool
 }
 
 // NewStream creates a new StreamChan with the given context, concurrency limit, and output channel.
 func NewStream[T any](ctx context.Context, c int, out chan T) *Stream[T] {
 	in := make(chan func() T)
 	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		stream(ctx, c, in, out)
-	}()
-	return &Stream[T]{
+
+	s := &Stream[T]{
 		ctx:  ctx,
 		in:   in,
 		out:  out,
 		done: done,
 	}
+
+	s.isRun.Store(true)
+	go func() {
+		defer close(done)
+		defer s.isRun.Store(false)
+		stream(ctx, c, in, out)
+	}()
+
+	return s
 }
 
-// Close stops the stream.
+// Close stops the stream. Should be called after all tasks are submitted or want to stop the stream.
+// Will block until concurrent map is closed.
 func (s *Stream[T]) Close() {
+	if !s.isRun.Load() {
+		return
+	}
 	close(s.in)
-	close(s.done)
+	<-s.done
+}
+
+// IsDone returns true if the stream is done or finished executing.
+func (s *Stream[T]) IsDone() bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsRunning returns true if the stream is running.
+func (s *Stream[T]) IsRunning() bool {
+	return s.isRun.Load()
 }
 
 // Go sends a task to the stream's pool. All tasks are executed concurrently.
 // If worker pool is full, it will block until a worker is available.
 func (s *Stream[T]) Go(task func() T) {
+	if !s.isRun.Load() {
+		return
+	}
 	select {
 	case <-s.done:
 	case <-s.ctx.Done():
@@ -52,6 +82,9 @@ func (s *Stream[T]) Out() <-chan T {
 
 // Wait blocks until stream is done or the context is canceled.
 func (s *Stream[T]) Wait() error {
+	if !s.isRun.Load() {
+		return nil
+	}
 	select {
 	case <-s.done:
 		return nil
@@ -65,8 +98,10 @@ func (s *Stream[T]) Wait() error {
 //
 // To stop the stream, close the input channel.
 func stream[T any](ctx context.Context, c int, in <-chan func() T, out chan<- T) {
+	taskResultBufferSize := c
 	if c <= 0 {
 		c = 0
+		taskResultBufferSize = 8
 	}
 
 	// Create a pool of result channels
@@ -78,7 +113,7 @@ func stream[T any](ctx context.Context, c int, in <-chan func() T, out chan<- T)
 	}
 
 	tasks := make(chan func())
-	taskResults := make(chan chan T, c)
+	taskResults := make(chan chan T, taskResultBufferSize)
 
 	// Tasks Worker goroutines
 	var workerWg sync.WaitGroup
@@ -134,6 +169,8 @@ func stream[T any](ctx context.Context, c int, in <-chan func() T, out chan<- T)
 		// Send the channel to the taskResults to serialize the results.
 		taskResults <- resultCh
 
+		// Create a task that will concurrently execute the input task
+		// and return the result to the result channel for serialization.
 		task := func() {
 			resultCh <- inTask()
 		}
