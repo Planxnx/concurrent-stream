@@ -27,10 +27,10 @@ func NewStream[T any](ctx context.Context, c int, out chan T) *Stream[T] {
 		done: done,
 	}
 
+	s.isRun.Store(true)
 	go func() {
-		defer s.isRun.Store(false)
 		defer close(done)
-		s.isRun.Store(true)
+		defer s.isRun.Store(false)
 		stream(ctx, c, in, out)
 	}()
 
