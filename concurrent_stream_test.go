@@ -31,7 +31,10 @@ func TestStream(t *testing.T) {
 					return factorial(i)
 				})
 			}
+
+			// Close the stream after all the tasks are submitted.
 			stream.Close()
+
 			if !stream.IsDone() {
 				t.Error("expected stream to be done after close")
 			}
