@@ -14,12 +14,18 @@ go get github.com/planxnx/concurrent-stream
 results := make(chan int)
 stream := cstream.NewStream(ctx, 8, results)
 
-for i := 0; i < 10; i++ {
-	i := i
-	stream.Go(func() int {
-		return expensiveFunc(i)
-	})
-}
+go func() {
+	for i := 0; i < 10; i++ {
+		i := i
+		stream.Go(func() int {
+			return expensiveFunc(i)
+		})
+	}
+
+	// Should be called to close the stream
+	// after all tasks are submitted.
+	stream.Close()
+}()
 
 wg := sync.WaitGroup{}
 wg.Add(1)
@@ -30,6 +36,7 @@ go func() {
 	}
 }()
 
+// Wait for all tasks to finish.
 if err := stream.Wait(); err != nil {
 	panic(err)
 }
