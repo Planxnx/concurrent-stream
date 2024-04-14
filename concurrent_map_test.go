@@ -41,6 +41,10 @@ func TestMap(t *testing.T) {
 				t.Errorf("expected %d, got %d", expected, item)
 			}
 		}
+
+		// Multiple calls to Close should not panic.
+		mapper.Close()
+		mapper.Close()
 	}
 
 	inputs := make([][]int, 0, len(n))

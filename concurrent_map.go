@@ -68,9 +68,9 @@ func (m *Map[I, O]) run() {
 	// Start the stream.
 	// Stream will stop when the input channel is closed.
 	go func() {
-		defer m.isRun.Store(false)
 		defer close(m.done)
 		defer close(m.out)
+		defer m.isRun.Store(false)
 		stream(m.ctx, m.goroutine, m.in, m.out)
 	}()
 }

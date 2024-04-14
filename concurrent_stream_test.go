@@ -73,6 +73,10 @@ func TestStream(t *testing.T) {
 		if i != n {
 			t.Errorf("expected %d results, got %d", n, i)
 		}
+
+		// Multiple calls to Close should not panic.
+		stream.Close()
+		stream.Close()
 	}
 
 	for _, goroutine := range goroutines {

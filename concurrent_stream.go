@@ -43,8 +43,12 @@ func (s *Stream[T]) Close() {
 	if !s.isRun.Load() {
 		return
 	}
-	close(s.in)
-	<-s.done
+	select {
+	case <-s.done:
+	default:
+		close(s.in)
+		<-s.done
+	}
 }
 
 // IsDone returns true if the stream is done or finished executing.
