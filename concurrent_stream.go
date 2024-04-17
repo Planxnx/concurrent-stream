@@ -11,6 +11,7 @@ type Stream[T any] struct {
 	ctx   context.Context
 	in    chan func() T
 	out   chan T
+	quit  chan struct{}
 	done  chan struct{}
 	isRun atomic.Bool
 }
@@ -25,6 +26,7 @@ func NewStream[T any](ctx context.Context, c int, out chan T) *Stream[T] {
 		in:   in,
 		out:  out,
 		done: done,
+		quit: make(chan struct{}),
 	}
 
 	s.isRun.Store(true)
@@ -44,8 +46,10 @@ func (s *Stream[T]) Close() {
 		return
 	}
 	select {
-	case <-s.done:
+	case <-s.quit:
+		<-s.done
 	default:
+		close(s.quit)
 		close(s.in)
 		<-s.done
 	}
@@ -73,6 +77,7 @@ func (s *Stream[T]) Go(task func() T) {
 		return
 	}
 	select {
+	case <-s.quit:
 	case <-s.done:
 	case <-s.ctx.Done():
 	case s.in <- task:
