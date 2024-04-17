@@ -155,9 +155,9 @@ func stream[T any](ctx context.Context, c int, in <-chan func() T, out chan<- T)
 
 			// Send the result to the output channel.
 			select {
-			case out <- result:
 			case <-ctx.Done():
 				return
+			case out <- result:
 			}
 
 			// Return the channel to the pool of unused channels.
